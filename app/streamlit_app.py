@@ -5,29 +5,42 @@ from models.kmeans_model import apply_kmeans
 from models.lda_model import apply_lda
 from visualization.wordclouds import generate_wordclouds
 
-st.set_page_config(page_title="📰 News Topic Modeling App (LDA & KMeans)")
-
+st.set_page_config(page_title="📰 News Topic Modeling", layout="wide")
 st.title("📰 News Topic Modeling App (LDA & KMeans)")
-st.markdown("Upload and visualize topics from the 20 Newsgroups dataset using NLP + ML.")
 
-st.info("Fetching dataset...")
-raw_docs = load_data()
+# Sidebar settings
+st.sidebar.title("Model Settings")
+model_type = st.sidebar.selectbox("Choose Model", ("LDA", "KMeans"))
+num_topics = st.sidebar.slider("Number of Topics", 2, 10, 5)
 
-st.info("Cleaning text...")
-# Limiting to 300 docs for faster testing
-cleaned_docs = [clean_text(doc) for doc in raw_docs[:300]]
+# Global spinner for the entire pipeline
+with st.spinner("⏳ Loading and processing..."):
 
-# Sidebar options
-st.sidebar.title("Model Options")
-model_choice = st.sidebar.selectbox("Choose Clustering Model", ["LDA", "KMeans"])
-num_topics = st.sidebar.slider("Number of Topics", min_value=2, max_value=10, value=5)
+    # Step 1: Load dataset
+    with st.spinner("📥 Fetching dataset..."):
+        docs, target_names = load_data()
+        st.success("✅ Dataset loaded!")
 
-if st.sidebar.button("Generate Wordclouds for Topics"):
-    with st.spinner("Training model and generating wordclouds..."):
-        if model_choice == "LDA":
+    # Step 2: Clean text
+    with st.spinner("🧼 Cleaning text..."):
+        cleaned_docs = clean_text(docs)
+        st.success("✅ Text cleaned!")
+
+    # Step 3: Apply chosen model
+    if model_type == "LDA":
+        with st.spinner("🔍 Applying LDA Topic Modeling..."):
             model, vectorizer = apply_lda(cleaned_docs, num_topics)
-            generate_wordclouds(model, vectorizer, model_type="LDA", n_topics=num_topics)
-
-        elif model_choice == "KMeans":
+            st.success("✅ LDA model complete!")
+    else:
+        with st.spinner("📊 Applying KMeans Clustering..."):
             model, vectorizer = apply_kmeans(cleaned_docs, num_topics)
-            generate_wordclouds(model, vectorizer, model_type="KMeans", n_topics=num_topics)
+            st.success("✅ KMeans clustering complete!")
+
+    # Step 4: Generate and display word clouds
+    with st.spinner("🎨 Generating Word Clouds..."):
+        st.subheader("Word Clouds for Each Topic")
+        generate_wordclouds(model, vectorizer, num_topics)
+        st.success("✅ Word clouds generated!")
+
+st.markdown("---")
+st.markdown("💡 *Built with ❤️ using Streamlit.*")
