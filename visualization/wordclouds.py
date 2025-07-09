@@ -1,39 +1,37 @@
-from wordcloud import WordCloud
 import matplotlib.pyplot as plt
+from wordcloud import WordCloud
 import streamlit as st
+import numpy as np
 
-def generate_wordclouds(model, vectorizer, model_type="LDA", n_topics=5):
+def generate_wordclouds(model, vectorizer, n_topics=5, model_type='lda'):
     st.subheader("Wordclouds for Topics")
 
-    if model_type == "LDA":
-        for topic_idx, topic in enumerate(model.components_[:n_topics]):
-            word_freq = {
-                vectorizer.get_feature_names_out()[i]: topic[i]
-                for i in topic.argsort()[:-30 - 1:-1]
-            }
-            wordcloud = WordCloud(
-                width=600,
-                height=300,
-                background_color='white',
-                max_words=30
-            ).generate_from_frequencies(word_freq)
-            st.write(f"### Topic {topic_idx + 1}")
-            st.image(wordcloud.to_array(), use_container_width=True)
+    # Get feature names
+    terms = vectorizer.get_feature_names_out()
 
-    elif model_type == "KMeans":
-        order_centroids = model.cluster_centers_.argsort()[:, ::-1]
-        terms = vectorizer.get_feature_names_out()
+    if model_type == 'lda':
+        try:
+            components = model.components_
+        except AttributeError:
+            st.error("❌ LDA model does not have 'components_'. Cannot generate word clouds.")
+            return
+    elif model_type == 'kmeans':
+        try:
+            components = model.cluster_centers_
+        except AttributeError:
+            st.error("❌ KMeans model does not have 'cluster_centers_'. Cannot generate word clouds.")
+            return
+    else:
+        st.error("❌ Unknown model type.")
+        return
 
-        for topic_idx in range(n_topics):
-            word_freq = {
-                terms[i]: model.cluster_centers_[topic_idx][i]
-                for i in order_centroids[topic_idx][:30]
-            }
-            wordcloud = WordCloud(
-                width=600,
-                height=300,
-                background_color='white',
-                max_words=30
-            ).generate_from_frequencies(word_freq)
-            st.write(f"### Cluster {topic_idx + 1}")
-            st.image(wordcloud.to_array(), use_container_width=True)
+    for topic_idx, topic in enumerate(components[:n_topics]):
+        st.markdown(f"#### Topic {topic_idx + 1}")
+        word_freq = {terms[i]: topic[i] for i in topic.argsort()[:-21:-1]}
+
+        wordcloud = WordCloud(width=800, height=400, background_color='white').generate_from_frequencies(word_freq)
+
+        fig, ax = plt.subplots(figsize=(10, 5))
+        ax.imshow(wordcloud, interpolation='bilinear')
+        ax.axis("off")
+        st.pyplot(fig)
